@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+</head>
+<body>
+    <div class="container-fluid text-center bg-primary">
+        <h1 class="fw-bold mt-4 mb-4">BUDGET</h1>
+        <h5 id="budgetowner"></h5>
+        <div class="row text-center mt-5 justify-content-center">
+            <div class="col-sm-5 col-md-4 me-3 mb-4 border border-4 border-body-light">
+                <h3>BUDGET</h3>
+                <input type="text" placeholder="Enter Username" class="form-control border border-2 mt-3 mb-4" id="username">
+                <input type="number" placeholder="Enter Total Amount" class="form-control border border-2 mt-3 mb-4" id="budget">
+                <p class="text-danger" id="fillBudget"></p>
+                <button class="btn btn-danger w-100" id="addBudget">Add Amount</button>
+            </div>
+            <div class="col-sm-5 col-md-4 mb-4 border border-4 border-body-light">
+                <h3>EXPENSES</h3>
+                <input type="text" placeholder="Enter Title Of Expense" class="form-control border border-2 mt-3 mb-4" id="entertitle">
+                <input type="number" placeholder="Enter Cost Of Expense" class="form-control border border-2 mt-3 mb-4" id="enterexpense">
+                <p class="text-danger" id="checkexpense"></p>
+                <button class="btn btn-danger w-100 mb-4" id="addExpense">Add Amount</button>
+            </div>
+        </div>
+        <div class="row text-center mt-5 justify-content-center bg-warning p-2">
+            <div class="col-4">
+                <h4>Total</h4>
+                <p class="fs-3 fw-3" id="total-display">0</p>
+            </div>
+            <div class="col-4">
+                <h4>Expenses</h4>
+                <p class="fs-3 fw-3" id="expense-display">0</p>
+            </div>
+            <div class="col-4">
+                <h4>Balance</h4>
+                <p class="fs-3 fw-3" id="balance-display">0</p>
+            </div>
+        </div>
+        <div class="row text-center bg-danger ">
+            <div class="col-12">
+                <h4 class="text-warning text-decoration-underline">Expense Titles</h4>
+                <ul class="list-unstyled" id="expenseTitles"></ul>
+            </div>
+        </div>
+        <div class="row text-center mt-4">
+            <div class="col-12">
+                <button class="btn btn-success mb-4" id="delete">Delete Budget</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            let addBudgetBtn = document.querySelector("#addBudget");
+            let addExpenseBtn = document.querySelector("#addExpense");
+            let usernameInput = document.querySelector("#username");
+            let expenseTitles = document.querySelector("#expenseTitles");                  
+            function updateDisplay(user) {
+                document.querySelector("#budgetowner").textContent=user.name ? user.name : ""
+                document.querySelector("#total-display").textContent = user.budget ? user.budget.toFixed(2) : "0";
+                document.querySelector("#expense-display").textContent = user.expenses ? user.expenses.toFixed(2) : "0";
+                document.querySelector("#balance-display").textContent = (user.budget - (user.expenses || 0)).toFixed(2);
+                displayExpenses(user.expenseList || []); // Update to display expenses
+            }
+
+            function displayExpenses(expenseList) {
+                expenseTitles.innerHTML = ""; // Clear previous entries
+                expenseList.forEach(expense => {
+                    const li = document.createElement("li");
+                    li.textContent = `${expense.title}: $${expense.amount.toFixed(2)}`;
+                    li.style.color = "yellow"; // Custom style
+                    expenseTitles.appendChild(li);
+                });
+            }
+
+            usernameInput.addEventListener("change", () => {
+                const username = usernameInput.value.trim();
+                if (username) {
+                    let user = JSON.parse(localStorage.getItem(username));
+                    if (user) {
+                        updateDisplay(user);
+                    } else {
+                        document.querySelector("#total-display").textContent = "0";
+                        document.querySelector("#expense-display").textContent = "0";
+                        document.querySelector("#balance-display").textContent = "0";
+                        expenseTitles.innerHTML = ""; // Clear previous entries
+                    }
+                }
+            });
+
+            addBudgetBtn.addEventListener("click", () => {
+                const username = usernameInput.value.trim();
+                const budgetAmount = parseFloat(document.querySelector("#budget").value);
+
+                if (!username || isNaN(budgetAmount) || budgetAmount <= 0) {
+                    document.querySelector("#fillBudget").textContent = "Please enter a valid budget amount and username.";
+                    return;
+                }
+
+                let user = JSON.parse(localStorage.getItem(username)) || { budget: 0, expenses: 0, expenseList: [] };
+                user.budget = budgetAmount;
+                localStorage.setItem(username, JSON.stringify(user));
+                document.querySelector("#fillBudget").textContent = ""; // Clear error message
+                updateDisplay(user);
+                document.querySelector("#budget").value = ""; // Clear budget input
+            });
+
+            addExpenseBtn.addEventListener("click", () => {
+                const title = document.querySelector("#entertitle").value.trim();
+                const expenseAmount = parseFloat(document.querySelector("#enterexpense").value);
+                const username = usernameInput.value.trim();
+
+                if (!title || isNaN(expenseAmount) || expenseAmount <= 0) {
+                    document.querySelector("#checkexpense").textContent = "Please enter a valid title and expense amount.";
+                    return;
+                }
+
+                let user = JSON.parse(localStorage.getItem(username));
+                if (user) {
+                    user.expenses = user.expenses || 0;
+                    user.expenses += expenseAmount;
+
+                    // Add the new expense to the expenseList
+                    user.expenseList.push({ title, amount: expenseAmount });
+
+                    localStorage.setItem(username, JSON.stringify(user));
+                    document.querySelector("#checkexpense").textContent = ""; // Clear error message
+                    updateDisplay(user);
+
+                    document.querySelector("#entertitle").value = ""; // Clear title input
+                    document.querySelector("#enterexpense").value = ""; // Clear expense input
+                } else {
+                    document.querySelector("#checkexpense").textContent = "User not found.";
+                }
+            });
+
+            // Clear budget and expense option for adding new
+            document.querySelector("#delete").addEventListener("click", () => {
+                const username = usernameInput.value.trim();
+                if (!username) {
+                    alert("Please enter a username to delete the budget and expenses.");
+                    return;
+                }
+
+                let user = JSON.parse(localStorage.getItem(username));
+                if (user) {
+                    user.budget = 0;
+                    user.expenses = 0;
+                    user.expenseList = []; // Reset the expense list
+                    localStorage.setItem(username, JSON.stringify(user));
+                    updateDisplay(user); // Update display after deletion
+                    expenseTitles.innerHTML = ""; // Clear expense titles
+                    alert("Budget and expenses have been reset.");
+                } else {
+                    alert("User not found.");
+                }
+            });
+        });
+    </script>
+</body>
+</html>
+
